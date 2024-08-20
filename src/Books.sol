@@ -5,8 +5,9 @@ import "@thirdweb-dev/contracts/base/ERC1155Base.sol";
 import "@thirdweb-dev/contracts/extension/PermissionsEnumerable.sol";
 
 
-contract Books is ERC1155Base, PermissionsEnumerable {
+contract Books is PermissionsEnumerable, ERC1155Base {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bool public isTransferable = false;
 
       constructor(
         address _defaultAdmin,
@@ -138,5 +139,38 @@ contract Books is ERC1155Base, PermissionsEnumerable {
         }
     
         _burnBatch(_owner, _tokenIds, _amounts);
+    }
+
+    function setTransferable(bool _isTransferable) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        isTransferable = _isTransferable;
+    }
+
+    // Disable ability for users to transfer books
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        // Restrict transfers by ensuring 'from' and 'to' are not zero address
+        if (isTransferable && from != address(0) && to != address(0)) {
+            revert("Transfers are disabled");
+        }
+
+        if (from == address(0)) {
+            for (uint256 i = 0; i < ids.length; ++i) {
+                totalSupply[ids[i]] += amounts[i];
+            }
+        }
+
+        if (to == address(0)) {
+            for (uint256 i = 0; i < ids.length; ++i) {
+                totalSupply[ids[i]] -= amounts[i];
+            }
+        }
     }
 }
