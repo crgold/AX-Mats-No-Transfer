@@ -157,7 +157,7 @@ contract Books is PermissionsEnumerable, ERC1155Base {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
         // Restrict transfers by ensuring 'from' and 'to' are not zero address
-        if (isTransferable && from != address(0) && to != address(0)) {
+        if (!isTransferable && from != address(0) && to != address(0) && !hasRole(DEFAULT_ADMIN_ROLE, operator)) {
             revert("Transfers are disabled");
         }
 
