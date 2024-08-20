@@ -139,33 +139,4 @@ contract Books is ERC1155Base, PermissionsEnumerable {
     
         _burnBatch(_owner, _tokenIds, _amounts);
     }
-
-    // Disable ability for users to transfer books
-    function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal override {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-
-        // Restrict transfers by ensuring 'from' and 'to' are not zero address
-        if (from != address(0) && to != address(0)) {
-            revert("Transfers are disabled");
-        }
-
-        if (from == address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
-                totalSupply[ids[i]] += amounts[i];
-            }
-        }
-
-        if (to == address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
-                totalSupply[ids[i]] -= amounts[i];
-            }
-        }
-    }
 }
