@@ -8,16 +8,6 @@ import "@thirdweb-dev/contracts/extension/PermissionsEnumerable.sol";
 contract Mats is PermissionsEnumerable, ERC1155Base {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-    // a mapping of token ids to booleans that determins if a token can be transferred
-    mapping(uint256 => bool) public isTransferable;
-
-    // Event emitted when a token's transferability is set
-    event TransferabilitySet(uint256 indexed tokenId, bool isTransferable);
-
-    // Event emitted when multiple tokens' transferability is set
-    event BatchTransferabilitySet(uint256[] indexed tokenIds, bool[] isTransferable);
-
-
       constructor(
         address _defaultAdmin,
         string memory _name,
@@ -120,63 +110,34 @@ contract Mats is PermissionsEnumerable, ERC1155Base {
     *  @param _tokenId The tokenId of the NFT to burn.
     *  @param _amount  The amount of the NFT to burn.
     */
-    function burnFrom(
+    function burn(
         address  _owner,
         uint256 _tokenId,
         uint256 _amount
-    ) external onlyRole(MINTER_ROLE){
-        require(balanceOf[_owner][_tokenId] >= _amount, "Not enough books owned");
+    ) external override onlyRole(MINTER_ROLE){
+        require(balanceOf[_owner][_tokenId] >= _amount, "Not enough materials owned");
         _burn(_owner, _tokenId, _amount);
     }
 
     /**
-    *  @notice         Lets MINTER_ROLE burn NFTs of the given tokenIds from a users wallet.
+    *  @notice          Lets MINTER_ROLE burn NFTs of the given tokenIds from a users wallet.
     *
     *  @param _owner    The owner of the NFTs to burn.
     *  @param _tokenIds The tokenIds of the NFTs to burn.
     *  @param _amounts  The amounts of the NFTs to burn.
     */
-    function burnFromBatch(
+    function burnBatch(
         address _owner,
         uint256[] memory _tokenIds,
         uint256[] memory _amounts
-    ) external onlyRole(MINTER_ROLE){
+    ) external override onlyRole(MINTER_ROLE){
         require(_tokenIds.length == _amounts.length, "Length mismatch");
     
         for (uint256 i = 0; i < _tokenIds.length; i += 1) {
-            require(balanceOf[_owner][_tokenIds[i]] >= _amounts[i], "Not enough books owned");
+            require(balanceOf[_owner][_tokenIds[i]] >= _amounts[i], "Not enough materials owned");
         }
     
         _burnBatch(_owner, _tokenIds, _amounts);
-    }
-
-    /**
-    *  @notice                  Set specific token id to be transferable.
-    *
-    *  @param tokenIds          The tokenId of the NFT.
-    *  @param _isTransferable   Bollean value of true or false.
-    */
-    function setTransferable(uint256 tokenId, bool _isTransferable) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        isTransferable[tokenId] = _isTransferable;
-        emit TransferabilitySet(tokenId, _isTransferable);
-    }
-
-    /**
-    *  @notice                  Set batch token ids to be transferable.
-    *
-    *  @param tokenIds          The tokenIds of the NFTs.
-    *  @param _isTransferable   Boolean values indicating if each token is transferable.
-    */
-    function setBatchTransferable(uint256[] calldata tokenIds, bool[] calldata _isTransferable) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(tokenIds.length == _isTransferable.length, "Array lengths must match");
-
-        for (uint256 i = 0; i < tokenIds.length;) {
-            isTransferable[tokenIds[i]] = _isTransferable[i];
-            unchecked {
-                ++i;
-            }
-        }
-        emit BatchTransferabilitySet(tokenIds, _isTransferable);
     }
 
     /**
@@ -201,14 +162,7 @@ contract Mats is PermissionsEnumerable, ERC1155Base {
 
         // Restrict transfers by ensuring 'from' and 'to' are not zero address
         if (from != address(0) && to != address(0) && !hasRole(DEFAULT_ADMIN_ROLE, operator)) {
-            for (uint256 i = 0; i < ids.length; ) {
-                if (!isTransferable[ids[i]]) {
-                    revert("Transfer of this token ID is disabled");
-                }
-                unchecked {
-                    ++i;
-                }
-            }
+            revert("Transfer of this token ID is disabled");
         }
 
         if (from == address(0)) {
