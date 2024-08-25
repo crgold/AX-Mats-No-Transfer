@@ -179,7 +179,16 @@ contract Mats is PermissionsEnumerable, ERC1155Base {
         emit BatchTransferabilitySet(tokenIds, _isTransferable);
     }
 
-    // Add switch for enabling and disabling transfer of mats
+    /**
+    *  @notice          Add switch for checking if a mat id is transfer enabled
+    *
+    *  @param operator  The function caller
+    *  @param from      Where the NFT's originate
+    *  @param to        Where they will be sent
+    *  @param ids       The tokenIds of the NFTs.
+    *  @param amounts   The amounts to be transferred.
+    *  @param data      Any additional data that is required (unused)
+    */
     function _beforeTokenTransfer(
         address operator,
         address from,
@@ -222,7 +231,9 @@ contract Mats is PermissionsEnumerable, ERC1155Base {
     }
 
     /**
-    *  This function returns who is authorized to set the metadata for the contract.
+    *  @notice                  This function returns who is authorized to set the metadata for the contract.
+    *
+    *  @return success A boolean that determined whether msg.sender is authorized to set the contract uri
     */
     function _canSetContractURI() internal view virtual override returns (bool) {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Not authorized to set contract URI");
