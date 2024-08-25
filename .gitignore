@@ -1,5 +1,6 @@
 cache/
 out/
 /node_modules
+/scripts
 yarn.lock
 scripts/testBatchRead.mjs
