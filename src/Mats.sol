@@ -5,9 +5,18 @@ import "@thirdweb-dev/contracts/base/ERC1155Base.sol";
 import "@thirdweb-dev/contracts/extension/PermissionsEnumerable.sol";
 
 
-contract Books is PermissionsEnumerable, ERC1155Base {
+contract Mats is PermissionsEnumerable, ERC1155Base {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bool public isTransferable = false;
+
+    // a mapping of token ids to booleans that determins if a token can be transferred
+    mapping(uint256 => bool) public isTransferable;
+
+    // Event emitted when a token's transferability is set
+    event TransferabilitySet(uint256 indexed tokenId, bool isTransferable);
+
+    // Event emitted when multiple tokens' transferability is set
+    event BatchTransferabilitySet(uint256[] indexed tokenIds, bool[] isTransferable);
+
 
       constructor(
         address _defaultAdmin,
@@ -111,11 +120,11 @@ contract Books is PermissionsEnumerable, ERC1155Base {
     *  @param _tokenId The tokenId of the NFT to burn.
     *  @param _amount  The amount of the NFT to burn.
     */
-    function burn(
-        address _owner,
+    function burnFrom(
+        address  _owner,
         uint256 _tokenId,
         uint256 _amount
-    ) external override onlyRole(MINTER_ROLE){
+    ) external onlyRole(MINTER_ROLE){
         require(balanceOf[_owner][_tokenId] >= _amount, "Not enough books owned");
         _burn(_owner, _tokenId, _amount);
     }
@@ -127,11 +136,11 @@ contract Books is PermissionsEnumerable, ERC1155Base {
     *  @param _tokenIds The tokenIds of the NFTs to burn.
     *  @param _amounts  The amounts of the NFTs to burn.
     */
-    function burnBatch(
+    function burnFromBatch(
         address _owner,
         uint256[] memory _tokenIds,
         uint256[] memory _amounts
-    ) external override onlyRole(MINTER_ROLE){
+    ) external onlyRole(MINTER_ROLE){
         require(_tokenIds.length == _amounts.length, "Length mismatch");
     
         for (uint256 i = 0; i < _tokenIds.length; i += 1) {
@@ -141,11 +150,36 @@ contract Books is PermissionsEnumerable, ERC1155Base {
         _burnBatch(_owner, _tokenIds, _amounts);
     }
 
-    function setTransferable(bool _isTransferable) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        isTransferable = _isTransferable;
+    /**
+    *  @notice                  Set specific token id to be transferable.
+    *
+    *  @param tokenIds          The tokenId of the NFT.
+    *  @param _isTransferable   Bollean value of true or false.
+    */
+    function setTransferable(uint256 tokenId, bool _isTransferable) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        isTransferable[tokenId] = _isTransferable;
+        emit TransferabilitySet(tokenId, _isTransferable);
     }
 
-    // Disable ability for users to transfer books
+    /**
+    *  @notice                  Set batch token ids to be transferable.
+    *
+    *  @param tokenIds          The tokenIds of the NFTs.
+    *  @param _isTransferable   Boolean values indicating if each token is transferable.
+    */
+    function setBatchTransferable(uint256[] calldata tokenIds, bool[] calldata _isTransferable) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(tokenIds.length == _isTransferable.length, "Array lengths must match");
+
+        for (uint256 i = 0; i < tokenIds.length;) {
+            isTransferable[tokenIds[i]] = _isTransferable[i];
+            unchecked {
+                ++i;
+            }
+        }
+        emit BatchTransferabilitySet(tokenIds, _isTransferable);
+    }
+
+    // Add switch for enabling and disabling transfer of mats
     function _beforeTokenTransfer(
         address operator,
         address from,
@@ -157,20 +191,41 @@ contract Books is PermissionsEnumerable, ERC1155Base {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
         // Restrict transfers by ensuring 'from' and 'to' are not zero address
-        if (!isTransferable && from != address(0) && to != address(0) && !hasRole(DEFAULT_ADMIN_ROLE, operator)) {
-            revert("Transfers are disabled");
+        if (from != address(0) && to != address(0) && !hasRole(DEFAULT_ADMIN_ROLE, operator)) {
+            for (uint256 i = 0; i < ids.length; ) {
+                if (!isTransferable[ids[i]]) {
+                    revert("Transfer of this token ID is disabled");
+                }
+                unchecked {
+                    ++i;
+                }
+            }
         }
 
         if (from == address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
+            for (uint256 i = 0; i < ids.length;) {
                 totalSupply[ids[i]] += amounts[i];
+                unchecked {
+                    ++i;
+                }
             }
         }
 
         if (to == address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
+            for (uint256 i = 0; i < ids.length;) {
                 totalSupply[ids[i]] -= amounts[i];
+                unchecked {
+                    ++i;
+                }
             }
         }
+    }
+
+    /**
+    *  This function returns who is authorized to set the metadata for the contract.
+    */
+    function _canSetContractURI() internal view virtual override returns (bool) {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Not authorized to set contract URI");
+        return true;
     }
 }
