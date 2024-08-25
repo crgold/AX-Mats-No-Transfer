@@ -43,7 +43,7 @@ contract Mats is PermissionsEnumerable, ERC1155Base {
         uint256 _amount
     ) public override onlyRole(MINTER_ROLE){
         require(_amount > 0, "Amount must be greater than zero");
-        
+
         uint256 tokenIdToMint;
         uint256 nextIdToMint = nextTokenIdToMint();
     
@@ -163,7 +163,7 @@ contract Mats is PermissionsEnumerable, ERC1155Base {
 
         // Restrict transfers by ensuring 'from' and 'to' are not zero address
         if (from != address(0) && to != address(0) && !hasRole(DEFAULT_ADMIN_ROLE, operator)) {
-            revert("Transfer of this token ID is disabled");
+            revert("Transfers are disabled");
         }
 
         if (from == address(0)) {
