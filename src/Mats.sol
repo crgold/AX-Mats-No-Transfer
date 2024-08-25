@@ -42,7 +42,8 @@ contract Mats is PermissionsEnumerable, ERC1155Base {
         string memory _tokenURI,
         uint256 _amount
     ) public override onlyRole(MINTER_ROLE){
-    
+        require(_amount > 0, "Amount must be greater than zero");
+        
         uint256 tokenIdToMint;
         uint256 nextIdToMint = nextTokenIdToMint();
     
